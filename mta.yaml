@@ -1,42 +1,95 @@
 _schema-version: 3.3.0
 ID: IT_Ticket
+description: A simple CAP project.
 version: 1.0.0
-description: "A simple CAP project."
+modules:
+- name: IT_Ticket-srv
+  type: nodejs
+  path: gen/srv
+  requires:
+  - name: IT_Ticket-db
+  - name: IT_Ticket-auth
+  provides:
+  - name: srv-api
+    properties:
+      srv-url: ${default-url}
+  parameters:
+    buildpack: nodejs_buildpack
+    instances: 1
+  build-parameters:
+    builder: npm-ci
+- name: IT_Ticket-db-deployer
+  type: hdb
+  path: db
+  requires:
+  - name: IT_Ticket-db
+  parameters:
+    buildpack: nodejs_buildpack
+- name: IT_Ticket-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: IT_Ticket-destination-service
+    parameters:
+      content-target: true
+  - name: IT_Ticket_html_repo_host
+    parameters:
+      service-key:
+        name: IT_Ticket_html_repo_host-key
+  - name: IT_Ticket-auth
+    parameters:
+      service-key:
+        name: IT_Ticket-auth-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: ticketapprouter_IT_Ticket_html_repo_host
+          ServiceInstanceName: IT_Ticket-html5-app-host-service
+          ServiceKeyName: IT_Ticket_html_repo_host-key
+          sap.cloud.service: ticketapprouter
+        - Authentication: OAuth2UserTokenExchange
+          Name: ticketapprouter_IT_Ticket_auth
+          ServiceInstanceName: IT_Ticket-auth
+          ServiceKeyName: IT_Ticket-auth-key
+          sap.cloud.service: ticketapprouter
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+resources:
+- name: IT_Ticket-db
+  type: com.sap.xs.hdi-container
+  parameters:
+    service: hana
+    service-plan: hdi-shared
+- name: IT_Ticket-auth
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      tenant-mode: dedicated
+      xsappname: IT_Ticket-${org}-${space}
+    path: ./xs-security.json
+    service: xsuaa
+    service-plan: application
+- name: IT_Ticket-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      version: 1.0.0
+    service: destination
+    service-name: IT_Ticket-destination-service
+    service-plan: lite
+- name: IT_Ticket_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: IT_Ticket-html5-app-host-service
+    service-plan: app-host
 parameters:
   enable-parallel-deployments: true
 build-parameters:
   before-all:
-    - builder: custom
-      commands:
-        - npm ci
-        - npx cds build --production
-modules:
-  - name: IT_Ticket-srv
-    type: nodejs
-    path: gen/srv
-    parameters:
-      instances: 1
-      buildpack: nodejs_buildpack
-    build-parameters:
-      builder: npm-ci
-    provides:
-      - name: srv-api # required by consumers of CAP services (e.g. approuter)
-        properties:
-          srv-url: ${default-url}
-    requires:
-      - name: IT_Ticket-db
-
-  - name: IT_Ticket-db-deployer
-    type: hdb
-    path: db
-    parameters:
-      buildpack: nodejs_buildpack
-    requires:
-      - name: IT_Ticket-db
-
-resources:
-  - name: IT_Ticket-db
-    type: com.sap.xs.hdi-container
-    parameters:
-      service: hana
-      service-plan: hdi-shared
+  - builder: custom
+    commands:
+    - npm ci
+    - npx cds build --production

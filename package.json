@@ -6,9 +6,12 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
+    "@cap-js/hana": "^2",
     "@sap/cds": "^9",
+    "@sap/hana-client": "^2.25.31",
     "express": "^4",
-    "@cap-js/hana": "^2"
+    "hdb": "^2.25.1",
+    "@sap/xssec": "^4"
   },
   "engines": {
     "node": ">=20"
@@ -22,20 +25,23 @@
     "start": "cds-serve"
   },
   "cds": {
-    "build" : {
-      "tasks" : [
+    "build": {
+      "tasks": [
         {
-        "for" : "hana",
-        "desk" : "../db"
+          "for": "hana",
+          "dest": "../db"
         },
         {
-          "for" : "node-cf"
+          "for": "node-cf"
         }
       ]
     },
-    "requires" : {
-      "db" : {
-        "kind" : "hana-cloud"
+    "requires": {
+      "db": {
+        "kind": "hana-cloud"
+      },
+      "[production]": {
+        "auth": "mocked"
       }
     }
   }
